@@ -1,0 +1,1 @@
+{"success":true,"statusCode":200,"message":"Blog categories fetched successfully","data":[{"id":1,"name":"Education","status":"INACTIVE","createdAt":"2026-10-07T09:17:57.941Z","updateAt":"2026-10-07T09:17:57.941Z","deletedAt":null}],"timestamp":"2026-10-07T10:11:08.032Z"}
