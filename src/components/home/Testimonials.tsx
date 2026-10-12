@@ -1,18 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
+import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, MessageSquareQuote, Quote } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Motion";
-import { Eyebrow } from "@/components/ui/SectionHeading";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { Testimonial } from "@/lib/types";
 import { canOptimizeImage, cn, initials } from "@/lib/utils";
 
-const EASE = [0.19, 1, 0.22, 1] as const;
-
-const pad = (n: number) => String(n).padStart(2, "0");
+const navButton =
+  "flex size-11 items-center justify-center rounded-full border border-line bg-white text-ink transition hover:border-theme hover:bg-theme hover:text-white";
 
 /** Photo when the URL loads, initials otherwise, so a bad link never shows a broken image. */
 function Avatar({ name, src }: { name: string; src?: string | null }) {
@@ -22,18 +21,18 @@ function Avatar({ name, src }: { name: string; src?: string | null }) {
       <Image
         src={src}
         alt=""
-        width={52}
-        height={52}
+        width={48}
+        height={48}
         unoptimized={!canOptimizeImage(src)}
         onError={() => setFailed(true)}
-        className="size-13 shrink-0 rounded-full object-cover"
+        className="size-12 shrink-0 rounded-full object-cover"
       />
     );
   }
   return (
     <span
       aria-hidden
-      className="flex size-13 shrink-0 items-center justify-center rounded-full bg-theme-dark font-display text-lg font-semibold text-white"
+      className="flex size-12 shrink-0 items-center justify-center rounded-full bg-theme-dark text-[15px] font-bold text-white"
     >
       {initials(name)}
     </span>
@@ -41,129 +40,97 @@ function Avatar({ name, src }: { name: string; src?: string | null }) {
 }
 
 export function Testimonials({ items }: { items: Testimonial[] }) {
-  const [index, setIndex] = useState(0);
-  if (items.length === 0) return null;
+  const [emblaRef, embla] = useEmblaCarousel({ loop: true, align: "start" });
 
-  const count = items.length;
-  const active = index % count;
-  const current = items[active];
-  const go = (i: number) => setIndex((i + count) % count);
+  // The snap count follows cards per view (1 on phones, 3 on desktop), so it is re-read on reInit (resize).
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!embla) return () => {};
+      embla.on("select", onChange).on("reInit", onChange);
+      return () => {
+        embla.off("select", onChange).off("reInit", onChange);
+      };
+    },
+    [embla],
+  );
+  const selected = useSyncExternalStore(subscribe, () => embla?.selectedScrollSnap() ?? 0, () => 0);
+  const snapCount = useSyncExternalStore(subscribe, () => embla?.scrollSnapList().length ?? 0, () => 0);
+
+  if (items.length === 0) return null;
+  const scrollable = snapCount > 1;
 
   return (
-    <section className="section bg-surface" aria-labelledby="testimonials-heading">
-      <Container>
-        <Reveal>
-          <div className="relative overflow-hidden rounded-[2rem] bg-theme-deep p-6 sm:p-10 lg:rounded-[2.25rem] lg:p-16">
-            <Quote
-              aria-hidden
-              fill="currentColor"
-              strokeWidth={0}
-              className="pointer-events-none absolute -top-16 left-[36%] size-96 text-white/5"
+    <section className="section relative overflow-hidden bg-gradient-to-br from-[#f8fbfa] via-white to-mint" aria-label="Testimonials">
+      <div aria-hidden className="bg-grid-soft absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_0%,black,transparent)]" />
+      <div aria-hidden className="absolute -top-32 right-[-8%] size-[28rem] rounded-full bg-theme/10 blur-3xl" />
+
+      <Container className="relative">
+        <div className="relative flex items-end justify-between gap-6">
+          <Reveal className="w-full">
+            <SectionHeading
+              eyebrow="Testimonials"
+              icon={<MessageSquareQuote />}
+              title="What Educators"
+              accent="& Parents Say"
+              description="Hear from the teachers, coordinators and parents across 4,000+ schools who learn with PM Publishers every day."
             />
+          </Reveal>
+          {scrollable && (
+            <div className="absolute right-0 bottom-0 hidden gap-2 md:flex">
+              <button type="button" onClick={() => embla?.scrollPrev()} aria-label="Previous testimonials" className={navButton}>
+                <ChevronLeft className="size-5" />
+              </button>
+              <button type="button" onClick={() => embla?.scrollNext()} aria-label="Next testimonials" className={navButton}>
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+          )}
+        </div>
 
-            <div className="relative grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:gap-16">
-              <div className="flex flex-col items-start">
-                <Eyebrow tone="dark" icon={<MessageSquareQuote />}>
-                  Testimonials
-                </Eyebrow>
-                <h2
-                  id="testimonials-heading"
-                  className="mt-5 text-[2rem] font-bold leading-[1.1] text-white sm:text-4xl lg:text-[3.25rem]"
-                >
-                  What Educators <br className="hidden sm:block" />
-                  <span className="text-green-300">&amp; Parents Say</span>
-                </h2>
-                <p className="mt-5 max-w-md text-base leading-relaxed text-white/80 md:text-lg">
-                  Hear from the teachers, coordinators and parents across 4,000+ schools who learn with PM Publishers
-                  every day.
-                </p>
-
-                {count > 1 && (
-                  <div className="mt-8 flex w-full flex-wrap items-center gap-4">
-                    <div role="group" aria-label="Choose a testimonial" className="flex flex-wrap gap-2.5">
-                      {items.map((t, i) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          aria-pressed={i === active}
-                          aria-label={`Show testimonial from ${t.name}`}
-                          onClick={() => go(i)}
-                          className={cn(
-                            "flex size-12 items-center justify-center rounded-full font-display text-[15px] font-semibold transition-all duration-300 focus-visible:outline-white",
-                            i === active
-                              ? "bg-white text-theme-deep ring-4 ring-white/30"
-                              : "border-[1.5px] border-white/35 bg-white/10 text-white hover:bg-white/20",
-                          )}
-                        >
-                          {initials(t.name)}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="ml-auto flex gap-2.5">
-                      <button
-                        type="button"
-                        aria-label="Previous testimonial"
-                        onClick={() => go(active - 1)}
-                        className="flex size-12 items-center justify-center rounded-full border-[1.5px] border-white/55 text-white transition-colors hover:bg-white/10 focus-visible:outline-white"
-                      >
-                        <ChevronLeft className="size-5" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="Next testimonial"
-                        onClick={() => go(active + 1)}
-                        className="flex size-12 items-center justify-center rounded-full bg-white text-theme-deep transition-colors hover:bg-theme-50 focus-visible:outline-white"
-                      >
-                        <ChevronRight className="size-5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative pt-5 pr-5 sm:pt-6.5 sm:pr-6.5">
-                <div aria-hidden className="absolute top-0 right-0 bottom-5 left-5 rounded-[1.75rem] bg-white/8 sm:bottom-6.5 sm:left-6.5" />
-                <div aria-hidden className="absolute inset-2.5 rounded-[1.75rem] bg-white/15 sm:inset-3.25" />
-                <div className="relative flex min-h-90 flex-col gap-7 rounded-[1.75rem] bg-white p-6 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.45)] sm:p-10 lg:min-h-95 lg:p-11">
-                  <div className="flex items-center justify-between gap-4">
-                    <span aria-hidden className="flex size-13 items-center justify-center rounded-2xl bg-theme-50 text-theme">
-                      <Quote fill="currentColor" strokeWidth={0} className="size-6" />
+        <Reveal delay={0.1}>
+          <div className="mt-9 overflow-hidden py-3" ref={emblaRef}>
+            <div className="-ml-6 flex touch-pan-y">
+              {items.map((t) => (
+                <div key={t.id} className="min-w-0 flex-[0_0_100%] pl-6 md:flex-[0_0_50%] lg:flex-[0_0_33.333%]">
+                  <figure className="group flex h-full flex-col rounded-3xl border border-line bg-white p-7 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-theme/30 hover:shadow-card-hover">
+                    <span
+                      aria-hidden
+                      className="flex size-12 items-center justify-center rounded-xl bg-sky-soft text-theme-deep transition-colors group-hover:bg-theme group-hover:text-white"
+                    >
+                      <Quote fill="currentColor" strokeWidth={0} className="size-5" />
                     </span>
-                    {count > 1 && (
-                      <p className="font-display text-[15px] font-semibold tracking-wide text-muted-light">
-                        <span className="text-ink">{pad(active + 1)}</span> / {pad(count)}
-                      </p>
-                    )}
-                  </div>
-
-                  <div aria-live="polite" className="flex flex-1 flex-col">
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.figure
-                        key={current.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        transition={{ duration: 0.35, ease: EASE }}
-                        className="flex flex-1 flex-col gap-7"
-                      >
-                        <blockquote className="flex-1 font-display text-[19px] font-medium leading-[1.55] text-ink sm:text-[22px] lg:text-2xl">
-                          “{current.message}”
-                        </blockquote>
-                        <figcaption className="flex items-center gap-3.5 border-t border-line-soft pt-6">
-                          <Avatar name={current.name} src={current.imageUrl} />
-                          <div className="min-w-0">
-                            <p className="text-base font-semibold text-ink">{current.name}</p>
-                            {current.designation && <p className="text-sm text-muted-light">{current.designation}</p>}
-                          </div>
-                        </figcaption>
-                      </motion.figure>
-                    </AnimatePresence>
-                  </div>
+                    <blockquote className="mt-5 flex-1 text-[15.5px] leading-relaxed text-ink-700">“{t.message}”</blockquote>
+                    <figcaption className="mt-6 flex items-center gap-3 border-t border-line-soft pt-5">
+                      <Avatar name={t.name} src={t.imageUrl} />
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-bold text-ink">{t.name}</p>
+                        {t.designation && <p className="text-[13px] text-muted-light">{t.designation}</p>}
+                      </div>
+                    </figcaption>
+                  </figure>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </Reveal>
+
+        {scrollable && (
+          <div className="mt-6 flex justify-center gap-2">
+            {Array.from({ length: snapCount }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Go to slide ${i + 1}`}
+                aria-current={i === selected}
+                onClick={() => embla?.scrollTo(i)}
+                className={cn(
+                  "h-2.5 rounded-full transition-all duration-300",
+                  i === selected ? "w-9 bg-theme" : "w-2.5 bg-theme/35 hover:bg-theme/60",
+                )}
+              />
+            ))}
+          </div>
+        )}
       </Container>
     </section>
   );
