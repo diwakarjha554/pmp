@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -30,8 +30,28 @@ type Props = {
   popularSeries: HeaderSeries[];
 };
 
-export function Header({ subjects, popularSeries }: Props) {
+const isActivePath = (pathname: string | null, href: string) =>
+  pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+/**
+ * The pathname is unknown while prerendering the shell of a route with params missing from
+ * generateStaticParams (e.g. a new series), so it is read inside Suspense. The fallback is the
+ * same header without an active link; the real one streams in at request time.
+ */
+export function Header(props: Props) {
+  return (
+    <Suspense fallback={<HeaderView {...props} pathname={null} />}>
+      <HeaderWithPathname {...props} />
+    </Suspense>
+  );
+}
+
+function HeaderWithPathname(props: Props) {
   const pathname = usePathname();
+  return <HeaderView {...props} pathname={pathname} />;
+}
+
+function HeaderView({ subjects, popularSeries, pathname }: Props & { pathname: string | null }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -69,7 +89,7 @@ export function Header({ subjects, popularSeries }: Props) {
     closeTimer.current = setTimeout(() => setOpenMenu(null), 140);
   };
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string) => isActivePath(pathname, href);
 
   return (
     <header className="sticky top-0 z-50">
@@ -349,7 +369,7 @@ function MobileMenu({
   subjects,
   popularSeries,
   pathname,
-}: Props & { open: boolean; onClose: () => void; pathname: string }) {
+}: Props & { open: boolean; onClose: () => void; pathname: string | null }) {
   const [expanded, setExpanded] = useState<string | null>("Books");
 
   return (
@@ -385,7 +405,7 @@ function MobileMenu({
           <ul className="space-y-1">
             {mainNav.map((item) => {
               const hasMenu = item.mega || !!item.children;
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = isActivePath(pathname, item.href);
               const isOpen = expanded === item.label;
               return (
                 <li key={item.label}>
