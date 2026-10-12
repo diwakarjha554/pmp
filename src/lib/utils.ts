@@ -43,6 +43,18 @@ export function formatINR(value: string | number) {
   return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
+const optimizedHosts = ["s3.pmpublishers.in", "pmpublishers.in", "images.unsplash.com"];
+
+/** Only hosts whitelisted in next.config can go through the image optimizer. */
+export function canOptimizeImage(src: string) {
+  if (src.startsWith("/")) return true;
+  try {
+    return optimizedHosts.includes(new URL(src).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function initials(name: string) {
   return name
     .trim()

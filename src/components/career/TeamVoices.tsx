@@ -4,19 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/Motion";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { Testimonial } from "@/lib/types";
-import { initials } from "@/lib/utils";
-
-const optimizedHosts = ["s3.pmpublishers.in", "pmpublishers.in", "images.unsplash.com"];
-
-/** Only hosts whitelisted in next.config can go through the image optimizer. */
-function canOptimize(src: string) {
-  if (src.startsWith("/")) return true;
-  try {
-    return optimizedHosts.includes(new URL(src).hostname);
-  } catch {
-    return false;
-  }
-}
+import { canOptimizeImage, initials } from "@/lib/utils";
 
 export function TeamVoices({ voices }: { voices: Testimonial[] }) {
   if (voices.length === 0) return null;
@@ -45,7 +33,7 @@ export function TeamVoices({ voices }: { voices: Testimonial[] }) {
                       alt={v.name}
                       width={48}
                       height={48}
-                      unoptimized={!canOptimize(v.imageUrl)}
+                      unoptimized={!canOptimizeImage(v.imageUrl)}
                       className="size-12 rounded-full object-cover"
                     />
                   ) : (

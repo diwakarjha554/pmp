@@ -2,12 +2,13 @@ import { Hero, type HeroSlide } from "@/components/home/Hero";
 import { LatestBlogs } from "@/components/home/LatestBlogs";
 import { LatestSeries } from "@/components/home/LatestSeries";
 import { RangeCarousel } from "@/components/home/RangeCarousel";
+import { Testimonials } from "@/components/home/Testimonials";
 import { WhyChoose } from "@/components/home/WhyChoose";
 import { CtaBanner } from "@/components/sections/CtaBanner";
 import { NewsletterSection } from "@/components/sections/NewsletterSection";
 import { StatsBand } from "@/components/sections/StatsBand";
 import { TrustBar } from "@/components/sections/TrustBar";
-import { getSliders } from "@/lib/api";
+import { getSliders, getTestimonials } from "@/lib/api";
 import { site } from "@/lib/site";
 
 const fallbackSlides: HeroSlide[] = [
@@ -22,7 +23,9 @@ const fallbackSlides: HeroSlide[] = [
 ];
 
 export default async function HomePage() {
-  const sliders = await getSliders();
+  const [sliders, testimonials] = await Promise.all([getSliders(), getTestimonials()]);
+  // TEAM testimonials belong to the career page.
+  const voices = testimonials.filter((t) => t.type !== "TEAM");
   const slides: HeroSlide[] =
     sliders.length > 0
       ? sliders.map((s) => ({
@@ -43,6 +46,7 @@ export default async function HomePage() {
       <StatsBand />
       <LatestSeries />
       <WhyChoose />
+      <Testimonials items={voices} />
       <LatestBlogs />
       <CtaBanner />
       <NewsletterSection />
