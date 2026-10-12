@@ -12,9 +12,6 @@ import { sampleTestimonials } from "@/data/sample-testimonials";
 import { getSliders, getTestimonials } from "@/lib/api";
 import { site } from "@/lib/site";
 
-/** Sample testimonials stand in for an empty API in dev and Vercel previews, never in production. */
-const showSampleTestimonials = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "preview";
-
 const fallbackSlides: HeroSlide[] = [
   {
     id: "default",
@@ -28,9 +25,9 @@ const fallbackSlides: HeroSlide[] = [
 
 export default async function HomePage() {
   const [sliders, testimonials] = await Promise.all([getSliders(), getTestimonials()]);
-  // TEAM testimonials belong to the career page.
+  // TEAM testimonials belong to the career page; samples fill in until the API has real ones.
   const liveVoices = testimonials.filter((t) => t.type !== "TEAM");
-  const voices = liveVoices.length === 0 && showSampleTestimonials ? sampleTestimonials : liveVoices;
+  const voices = liveVoices.length > 0 ? liveVoices : sampleTestimonials;
   const slides: HeroSlide[] =
     sliders.length > 0
       ? sliders.map((s) => ({

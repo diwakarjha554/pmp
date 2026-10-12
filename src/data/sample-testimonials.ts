@@ -1,8 +1,8 @@
 import type { Testimonial } from "@/lib/types";
 
 /**
- * Placeholder quotes so the homepage testimonials section can be reviewed in `next dev` and
- * Vercel preview builds while the API has none. Never used in production.
+ * Placeholder quotes shown in the homepage testimonials section while the API has none.
+ * Real testimonials added in the admin replace them automatically.
  */
 export const sampleTestimonials: Testimonial[] = [
   {
